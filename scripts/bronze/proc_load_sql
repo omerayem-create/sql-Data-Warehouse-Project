@@ -1,0 +1,116 @@
+/*
+=======================================================
+Stored procedure: Load Bronze Layer (source -> bronze)
+========================================================
+Script purpose :
+  The stored procedure loads data into the bronze schema from external file csv.
+   - truncates the table 
+   - bulk inserts data into the bronze tables from csv files.
+parameters:
+    This stored procedure does not accept or retun any values.
+
+Usage example : 
+  Exec bronze.load_bronze;
+
+*/
+
+
+-- Creating executing procedure
+-----------------------------------------------------------------------
+CREATE OR ALTER PROCEDURE bronze.load_bronze as 
+BEGIN
+    BEGIN TRY
+    print 'Loading CRM table ';
+    print '-------------------------------------------------------'
+    DECLARE @START_TIME DATETIME ,@END_TIME DATETIME
+    SET @START_TIME = GETDATE();
+        -- Truncate if table loaded 
+        --------------------------------------------------
+        TRUNCATE TABLE bronze.crm_cust_info;
+   
+        -- bulk insert table -----------------------------
+        BULK INSERT bronze.crm_cust_info
+        FROM 'C:\Documents\sql-data-warehouse-project\sql-data-warehouse-project\datasets\source_crm\cust_info.csv'
+        with (
+              FIRSTROW = 2 ,
+              FIELDTERMINATOR = ',',
+              TABLOCK  
+
+        );
+        -- Truncate if table loaded 
+        --------------------------------------------------
+
+        TRUNCATE TABLE bronze.crm_prd_info;
+   
+        -- bulk insert table -----------------------------
+
+        BULK INSERT bronze.crm_prd_info
+        FROM 'C:\Documents\sql-data-warehouse-project\sql-data-warehouse-project\datasets\source_crm\prd_info.csv'
+        with (
+              FIRSTROW = 2 ,
+              FIELDTERMINATOR = ',',
+              TABLOCK  );
+        -- Truncate if table loaded 
+        --------------------------------------------------
+        TRUNCATE TABLE bronze.crm_sales_details;
+  
+        -- bulk insert table -----------------------------
+
+        BULK INSERT bronze.crm_sales_details
+        FROM 'C:\Documents\sql-data-warehouse-project\sql-data-warehouse-project\datasets\source_crm\sales_details.csv'
+        with (
+              FIRSTROW = 2 ,
+              FIELDTERMINATOR = ',',
+              TABLOCK  );
+        -- Truncate if table loaded 
+        --------------------------------------------------
+        TRUNCATE TABLE bronze.erp_cust_az12;
+    
+        -- bulk insert table -----------------------------
+
+        BULK INSERT bronze.erp_cust_az12
+        FROM 'C:\Documents\sql-data-warehouse-project\sql-data-warehouse-project\datasets\source_erp\CUST_AZ12.CSV'
+        with (
+              FIRSTROW = 2 ,
+              FIELDTERMINATOR = ',',
+              TABLOCK  );
+
+    print 'Loading ERP Table ';
+    print '-------------------------------------------------------'
+
+        -- Truncate if table loaded 
+        --------------------------------------------------
+
+        TRUNCATE TABLE bronze.erp_loc_a101;
+    
+        -- bulk insert table -----------------------------
+        BULK INSERT bronze.erp_loc_a101
+        FROM 'C:\Documents\sql-data-warehouse-project\sql-data-warehouse-project\datasets\source_erp\LOC_A101.csv'
+        with (
+              FIRSTROW = 2 ,
+              FIELDTERMINATOR = ',',
+              TABLOCK  );
+        -- Truncate if table loaded 
+        --------------------------------------------------
+        TRUNCATE TABLE bronze.erp_px_cat_g1v2;
+    
+        -- bulk insert table -----------------------------
+
+        BULK INSERT bronze.erp_px_cat_g1v2
+        FROM 'C:\Documents\sql-data-warehouse-project\sql-data-warehouse-project\datasets\source_erp\PX_CAT_G1V2.csv'
+        with (
+              FIRSTROW = 2 ,
+              FIELDTERMINATOR = ',',
+       TABLOCK  );
+       SET @END_TIME = GETDATE();
+       PRINT 'LOADING DURATION : ' + CAST(DATEDIFF(SECOND,@START_TIME, @END_TIME)AS NVARCHAR)+ ' Seconds';
+    END TRY
+    BEGIN CATCH
+    PRINT '=====================================================================';
+    PRINT 'ERROR OCCURED DURING LOADING BRONZE LAYER';
+    PRINT 'ERROR MESSAGE ' + ERROR_MESSAGE();
+    PRINT 'ERROR NUMBER ' + CAST(ERROR_NUMBER()AS NVARCHAR);
+    PRINT 'ERROR STATE ' + CAST(ERROR_STATE() AS NVARCHAR);
+    PRINT '=====================================================================';
+    END CATCH
+END
