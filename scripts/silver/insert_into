@@ -1,7 +1,17 @@
+/* 
+Description : 
+            Inserting cleaned data into silver schema tables after cleaning it from bronze schema 
+Caution :
+       This process will truncate the table before adding new data 
+
+*/
 --- loading clean data into silver schema from bronze 
 --========================================================================
 -- loading into silver.crm_cust_info table
 --------------------------------------------------------------------------
+Truncate table silver.crm_sales_details;
+GO
+
 insert into silver.crm_cust_info
 (
 cst_id,
@@ -37,11 +47,13 @@ ROW_NUMBER() OVER (PARTITION BY CST_ID ORDER BY cst_create_date DESC) ROWNUMBER
 from bronze.crm_cust_info
 
 WHERE cst_id is not null)t
-where ROWNUMBER = 1
+where ROWNUMBER = 1;
 ------------------------------------------------------------------------------
 
 --Loading clean data into silver>crm_prd_info table 
 ------------------------------------------------------------------------------
+Truncate table silver.crm_sales_details;
+GO
 insert into silver.crm_prd_info
 (
     prd_id ,
@@ -71,11 +83,13 @@ case upper(trim(prd_line))
 end prd_line,
 prd_start_dt,
 lead(prd_start_dt)over(partition by prd_key order by prd_start_dt) prd_end_dt    -- correcting wrong end_date  
-from bronze.crm_prd_info
+from bronze.crm_prd_info;
 ------------------------------------------------------------------------------
 
---Loading clean data from bronze.crm_sales_datails
+--Loading clean data from bronze.crm_sales_datails in silver.crm_sales_details
 --==============================================================================
+Truncate table silver.crm_sales_details;
+GO
 
 insert into  silver.crm_sales_details (
 
@@ -106,15 +120,93 @@ select
         else 
          cast(cast( sls_due_dt as nvarchar ) as date) end   sls_due_dt ,
     
-        case when sls_sales < sls_quantity*sls_price
-                or sls_sales <=0                                         -- handling negative and null prices 
-                or sls_sales is null then sls_quantity*sls_price
+        case when sls_sales != sls_quantity*abs(sls_price) then sls_quantity*abs(sls_price)
+                when sls_sales <=0   then sls_quantity*abs(sls_price)                                      -- handling negative and null prices 
+                when sls_sales is null then sls_quantity*abs(sls_price)
                 else sls_sales       end sls_sales ,
        sls_quantity ,
-       case when  sls_price <= 0                                           -- handling negative and null prices
-                 or sls_price is null then  sls_sales/ abs(sls_quantity) 
-                 else sls_price      end sls_price 
+       case 
+             when sls_price <= 0                                          -- handling negative and null prices
+              or sls_price is null then  abs(sls_sales)/ abs(sls_quantity) 
+               else sls_price      end sls_price 
 
-from bronze.crm_sales_details
-  
+from bronze.crm_sales_details;
+
 ------------------------------------------------------------------------------------------------------------
+-- Loading clean data from bronze.erp_cust_az12 into silver.erp_cust_az12 table 
+--===========================================================================================================
+Truncate table ;
+GO
+insert into silver.erp_cust_az12
+( 
+cid,
+bdate,
+gen
+
+
+)
+
+
+select 
+	 case when  cid like 'nas%' then SUBSTRING(cid,4,len(cid))
+	 else cid end  cid ,
+	  case when bdate > getdate() 
+     OR  bdate < DATEADD(year, -100, GETDATE())  then null
+     else bdate end bdate,
+	 case when gen = upper(trim('F')) or gen = upper(trim('Female')) then 'Female'  
+     when gen = upper(trim('M')) or gen = upper(trim('Male')) then 'Male'
+     else 'n/a' end gen
+
+from bronze.erp_cust_az12 ;
+-------------------------------------------------------------------------------
+--Truncating  silver.erp_loc_a101 Table and loading clean data from bronze   
+--=============================================================================
+truncate table  silver.erp_loc_a101;
+GO
+-------------------------------------------------------------------------------
+
+insert into silver.erp_loc_a101
+(
+cid,
+cntry
+)
+
+select  cid,
+
+
+  case
+     when trim(cntry) = '' then null            -- nullig empty spaces and changes abreviations to fullname
+	 when cntry = upper(trim('DE')) or cntry = upper(trim('Germany')) then 'Germany'
+	 when cntry = upper(trim('USA')) or cntry = upper(trim('US')) or cntry =  upper(trim('United States')) then 'United States'
+	 else cntry end cntry
+
+
+
+
+from bronze.erp_loc_a101 ;
+
+--------------------------------------------------------------------------------
+--Truncating  silver.erp_px_cat_g1v2 Table and loading clean data from bronze   
+--------------------------------------------------------------------------------
+truncate table  silver.erp_px_cat_g1v2
+GO
+
+insert into     silver.erp_px_cat_g1v2
+(
+id,     
+cat,
+subcat,
+maintenance
+)
+
+select 
+id,             --- the data is clean no modification needed
+cat,
+subcat,
+maintenance
+
+
+from bronze.erp_px_cat_g1v2 ;
+--======================================================================================
+-- All tables inserted from Bronze schema after cleaning 
+--=======================================================================================
