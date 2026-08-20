@@ -171,9 +171,9 @@ cid,
 cntry
 )
 
-select  cid,
+select
 
-
+  replace( cid , '-' ,'') cid,
   case
      when trim(cntry) = '' then null            -- nullig empty spaces and changes abreviations to fullname
 	 when cntry = upper(trim('DE')) or cntry = upper(trim('Germany')) then 'Germany'
