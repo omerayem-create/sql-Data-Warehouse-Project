@@ -111,10 +111,9 @@ select
                 or sls_sales is null then sls_quantity*sls_price
                 else sls_sales       end sls_sales ,
        sls_quantity ,
-       case when sls_price  != sls_sales/ abs(sls_quantity) 
-              or sls_price <= 0                                           -- handling negative and null prices
-              or sls_price is null then  sls_sales/ abs(sls_quantity) 
-               else sls_price      end sls_price 
+       case when  sls_price <= 0                                           -- handling negative and null prices
+                 or sls_price is null then  sls_sales/ abs(sls_quantity) 
+                 else sls_price      end sls_price 
 
 from bronze.crm_sales_details
   
