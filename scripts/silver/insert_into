@@ -174,11 +174,11 @@ cntry
 select
 
   replace( cid , '-' ,'') cid,
-  case
-     when trim(cntry) = '' then null            -- nullig empty spaces and changes abreviations to fullname
-	 when cntry = upper(trim('DE')) or cntry = upper(trim('Germany')) then 'Germany'
-	 when cntry = upper(trim('USA')) or cntry = upper(trim('US')) or cntry =  upper(trim('United States')) then 'United States'
-	 else cntry end cntry
+ case
+    when trim(cntry) = '' OR trim(cntry) IS  null  then 'n/a'          -- nullig empty spaces and changes abreviations to fullname
+ when cntry = upper(trim('DE')) then 'Germany'
+ when upper(trim(cntry)) in ('USA','US') then 'United States'
+ else cntry end cntry
 
 
 
