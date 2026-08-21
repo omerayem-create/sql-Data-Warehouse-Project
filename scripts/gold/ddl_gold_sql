@@ -1,1 +1,77 @@
+/*
+Purpose of the Script:
+               The primary purpose of this script is to build the Gold Layer (Data Mart) of a data warehouse using a Star Schema design. 
+               It transforms messy, raw data from the operational systems (Silver Layer) into clean, business-friendly Dimensions
+               (descriptive data) and Facts (measurable metrics).By creating these views, 
+               the script isolates business users and reporting tools from the complex data cleaning and joining logic happening behind the scenes.Key */
+
+
+-- ------------------------------------------------------------
+-- View for customers table 
+--=============================================================
+
+create view gold.dim_customers as
+select 
+row_number()over(order by ci.cst_id ) as customer_key,
+ci.cst_id as customer_id,
+ci.cst_key as customer_number,
+ci.cst_firstname as fisrt_name,
+ci.cst_lastname as last_name,
+cl.cntry as country,
+ci.cst_marital_status as marital_status,
+case when ci.cst_gndr != 'n/a' then ci.cst_gndr
+     else coalesce(ce.gen , 'n/a') end gender,
+ce.bdate birthdate,
+ci.cst_create_date as create_date
+from silver.crm_cust_info ci
+left join silver.erp_cust_az12 ce
+on ci.cst_key = ce.cid
+left join silver.erp_loc_a101 cl
+on ci.cst_key = cl.cid ;
+
+---------------------------------------------------------------------------
+-- view dimension for produts
+--=========================================================================
+
+create view gold.dim_produts as
+select 
+row_number()over(order by pr.prd_id) as product_key,
+pr.prd_id as product_id,
+pr.prd_key as product_number,
+pr.cat_id as category_id,
+pc.cat as category,
+pc.subcat AS sub_category,
+pc.maintenance AS maintenance,
+pr.prd_nm AS product_name,
+prd_cost as product_cost,
+pr.prd_line as product_line,
+pr.prd_start_dt as product_start_date
+from silver.crm_prd_info pr
+left join silver.erp_px_cat_g1v2 pc
+on pr.cat_id = pc.id
+where pr.prd_end_dt is null ;
+
+---------------------------------------------------------------------------
+-- view fact sales
+--=========================================================================
+create view gold.fact_sales as
+
+select 
+sd.sls_ord_num as order_number,
+dc.customer_key,
+dp.product_key,
+sd.sls_order_dt  as order_date,
+sd.sls_ship_dt as shipp_date,
+sd.sls_due_dt as due_date,
+sd.sls_sales as sales_amount,
+sd.sls_quantity as quantity,
+sd.sls_price price
+
+from silver.crm_sales_details sd
+left join gold.dim_customers dc
+on dc.customer_id = sd.sls_cust_id
+left join  gold.dim_produts dp
+on sd.sls_prd_key = dp.product_number;
+-----------------------------------------------------------------------------------------------
+
 
